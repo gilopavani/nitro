@@ -42,7 +42,7 @@ async function main() {
         await nitroTypeController.finalizarSessao();
         
         // Aguarda antes de tentar novamente (5 minutos)
-        const tempoEsperaErro = 5 * 60 * 1000;
+        const tempoEsperaErro = 1 * 60 * 1000;
         logger.info(`Aguardando ${tempoEsperaErro/60000} minutos antes de tentar novamente...`);
         await new Promise(resolve => setTimeout(resolve, tempoEsperaErro));
         continue;
