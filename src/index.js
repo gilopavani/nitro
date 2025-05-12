@@ -4,6 +4,8 @@
 require('dotenv').config();
 const nitroTypeController = require('./controllers/nitrotype.controller');
 const logger = require('./utils/logger');
+const timeChecker = require('./utils/time-checker');
+const cleanup = require('./utils/cleanup');
 
 /**
  * Função principal que inicia a aplicação
@@ -13,12 +15,24 @@ async function main() {
   const infinito = true; // Flag para controle de execução infinita
   
   while (infinito) {
+    // Verifica se o horário atual é permitido para execução
+    if (!timeChecker.verificarHorarioPermitido()) {
+      // Aguarda 15 minutos antes de verificar novamente
+      const tempoEsperaHorarioRestrito = 15 * 60 * 1000; // 15 minutos
+      logger.info(`Aguardando ${tempoEsperaHorarioRestrito/60000} minutos antes de verificar o horário novamente...`);
+      await new Promise(resolve => setTimeout(resolve, tempoEsperaHorarioRestrito));
+      continue;
+    }
+    
     sessaoAtual++;
     
     try {
       logger.info(`-------------------------`);
       logger.info(`INICIANDO SESSÃO #${sessaoAtual}`);
       logger.info(`-------------------------`);
+      
+      // Verifica se deve limpar a pasta user_data a cada 3 sessões
+      cleanup.verificarLimpezaPeriodica(3);
       
       // Iniciar sessão no Nitrotype
       const loginSucesso = await nitroTypeController.iniciarSessao();
@@ -53,7 +67,7 @@ async function main() {
       
       logger.info('Sessão finalizada com sucesso');
       
-      // Aguarda um período de tempo antes de iniciar nova sessão (2 minutos)
+      // Aguarda um período de tempo antes de iniciar nova sessão
       const tempoEsperaEntreSessoes = parseInt(process.env.SESSION_INTERVAL || '120000', 10);
       logger.info(`Aguardando ${tempoEsperaEntreSessoes/1000} segundos antes de iniciar nova sessão...`);
       await new Promise(resolve => setTimeout(resolve, tempoEsperaEntreSessoes));

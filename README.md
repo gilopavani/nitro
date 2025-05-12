@@ -31,6 +31,15 @@ Um projeto Node.js que utiliza Puppeteer para automatização segura do site Nit
 - Seleção aleatória de User Agents
 - Plugins de stealth para evitar detecção de bot
 - Armazenamento de dados do usuário para sessões persistentes
+- Limpeza periódica dos dados do usuário a cada 3 sessões
+- Restrições de horário para execução automática
+
+## Restrições de Horário
+
+O bot não executará operações nos seguintes períodos:
+
+- Horário noturno: 00:00 às 07:00
+- Horário de almoço: 12:00 às 14:00
 
 ## Como Usar
 
@@ -65,3 +74,5 @@ Configure as variáveis de ambiente no arquivo `.env`:
 - `SLOW_MO`: Adiciona delay entre ações do Puppeteer (em ms)
 - `TIMEOUT`: Tempo limite para operações (em ms)
 - `NITROTYPE_LOGIN_URL`: URL de login do Nitrotype
+- `RACE_COUNT`: Número de corridas a serem realizadas por sessão
+- `SESSION_INTERVAL`: Intervalo entre sessões (em ms)
