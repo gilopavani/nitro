@@ -4,6 +4,7 @@
 require('dotenv').config();
 const nitroTypeController = require('./controllers/nitrotype.controller');
 const logger = require('./utils/logger');
+const { verificarHorarioPermitido } = require('./utils/time-restriction');
 
 /**
  * Função principal que inicia a aplicação
@@ -20,6 +21,15 @@ async function main() {
       logger.info(`INICIANDO SESSÃO #${sessaoAtual}`);
       logger.info(`-------------------------`);
       
+      // Verifica se o horário atual é permitido para operação
+      if (!verificarHorarioPermitido()) {
+        logger.info('Aguardando até o próximo horário permitido...');
+        // Aguarda 15 minutos antes de verificar novamente
+        const tempoEsperaHorario = 15 * 60 * 1000;
+        await new Promise(resolve => setTimeout(resolve, tempoEsperaHorario));
+        continue;
+      }
+      
       // Iniciar sessão no Nitrotype
       const loginSucesso = await nitroTypeController.iniciarSessao();
       
@@ -27,8 +37,8 @@ async function main() {
         logger.error('Não foi possível realizar login ou verificar autenticação');
         await nitroTypeController.finalizarSessao();
         
-        // Aguarda antes de tentar novamente (5 minutos)
-        const tempoEsperaErro = 5 * 60 * 1000;
+        // Aguarda antes de tentar novamente (1 minutos)
+        const tempoEsperaErro = 1 * 60 * 1000;
         logger.info(`Aguardando ${tempoEsperaErro/60000} minutos antes de tentar novamente...`);
         await new Promise(resolve => setTimeout(resolve, tempoEsperaErro));
         continue;
@@ -64,8 +74,8 @@ async function main() {
       // Garante que o navegador será fechado em caso de erro
       await nitroTypeController.finalizarSessao();
       
-      // Aguarda antes de tentar novamente (3 minutos)
-      const tempoEsperaErro = 3 * 60 * 1000;
+      // Aguarda antes de tentar novamente (1 minutos)
+      const tempoEsperaErro = 1 * 60 * 1000;
       logger.info(`Aguardando ${tempoEsperaErro/60000} minutos antes de tentar novamente...`);
       await new Promise(resolve => setTimeout(resolve, tempoEsperaErro));
     }

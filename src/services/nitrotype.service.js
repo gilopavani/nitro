@@ -5,6 +5,8 @@ const browserManager = require('../utils/browser');
 const puppeteerConfig = require('../config/puppeteer.config');
 const logger = require('../utils/logger');
 const raceService = require('./race.service');
+const fs = require('fs');
+const path = require('path');
 
 class NitroTypeService {
   // Propriedade para controlar se o usuário já está autenticado
@@ -282,6 +284,30 @@ class NitroTypeService {
         return false;
       }
       
+      // Verifica se há mensagem de falha de login
+      const textoFalhaLogin = await browserManager.page.evaluate(() => {
+        const mensagemErro = document.querySelector('.error-message');
+        if (mensagemErro) {
+          return mensagemErro.textContent.trim();
+        }
+        
+        // Verifica se há outras mensagens que indicam problemas de autenticação
+        const conteudo = document.body.innerText;
+        if (conteudo.includes('Please log in') || 
+            conteudo.includes('session expired') ||
+            conteudo.includes('Authentication failed')) {
+          return 'Erro de autenticação detectado';
+        }
+        
+        return null;
+      });
+      
+      if (textoFalhaLogin) {
+        logger.error(`Falha de login detectada: "${textoFalhaLogin}"`);
+        await this.realizarLogout();
+        return false;
+      }
+      
       // Aguarda o container de texto aparecer
       const textContainerExists = await browserManager.page.waitForSelector('.dash-copyContainer', {
         visible: true,
@@ -336,6 +362,41 @@ class NitroTypeService {
    */
   async fecharNavegador() {
     return browserManager.close();
+  }
+
+  /**
+   * Realiza logout completo e limpa dados do usuário
+   */
+  async realizarLogout() {
+    try {
+      logger.info('Realizando logout e limpando dados do usuário...');
+      
+      // Fecha o navegador atual
+      await this.fecharNavegador();
+      
+      // Limpa o diretório user_data
+      const userDataDir = path.join(__dirname, '..', '..', 'user_data');
+      if (fs.existsSync(userDataDir)) {
+        logger.info(`Removendo diretório de dados do usuário: ${userDataDir}`);
+        
+        // Em sistemas Unix/Linux/Mac
+        try {
+          fs.rmSync(userDataDir, { recursive: true, force: true });
+          logger.info('Diretório de dados do usuário removido com sucesso');
+        } catch (error) {
+          logger.error(`Erro ao remover diretório de dados: ${error.message}`);
+        }
+      }
+
+      // Reinicia a flag de autenticação
+      this._usuarioJaAutenticado = false;
+      
+      logger.info('Logout realizado com sucesso');
+      return true;
+    } catch (error) {
+      logger.error(`Erro ao realizar logout: ${error.message}`);
+      return false;
+    }
   }
 }
 

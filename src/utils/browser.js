@@ -44,6 +44,8 @@ class BrowserManager {
         ...puppeteerConfig.launchOptions
       };
 
+      // Nota: O Puppeteer criará o diretório userDataDir automaticamente
+
       // Iniciar o navegador com as configurações
       this.browser = await puppeteer.launch(launchOptions);
       this.page = await this.browser.newPage();

@@ -24,8 +24,8 @@ class NitroTypeController {
     } catch (error) {
       logger.error(`Erro ao iniciar sessão: ${error.message}`);
       
-      // Tenta fechar o navegador em caso de erro
-      await nitrotypeService.fecharNavegador();
+      // Tenta fechar o navegador e limpar dados em caso de erro
+      await nitrotypeService.realizarLogout();
       return false;
     }
   }
@@ -36,6 +36,7 @@ class NitroTypeController {
   async finalizarSessao() {
     try {
       logger.info('Finalizando sessão...');
+      // Apenas fecha o navegador sem limpar os cookies
       await nitrotypeService.fecharNavegador();
       logger.info('Sessão finalizada com sucesso');
       return true;
@@ -92,7 +93,7 @@ class NitroTypeController {
           
           // Se não for a última corrida, aguarda antes de iniciar a próxima
           if (corridasRealizadas < quantidade) {
-            const tempoEspera = 7000; // 7 segundos conforme solicitado
+            const tempoEspera = 4320; //
             logger.info(`Aguardando ${tempoEspera/1000} segundos antes da próxima corrida...`);
             await new Promise(resolve => setTimeout(resolve, tempoEspera));
           }

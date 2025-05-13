@@ -2,6 +2,7 @@
  * Serviço dedicado para gerenciar corridas no Nitrotype
  */
 const logger = require('../utils/logger');
+const nitrotypeService = require('./nitrotype.service');
 
 class RaceService {
   /**
@@ -23,6 +24,17 @@ class RaceService {
       
       logger.info(`Texto extraído: "${textoExtraido}"`);
       
+      // Encontra a maior palavra do texto para pular com Enter
+      const maiorPalavra = this._encontrarMaiorPalavra(textoExtraido);
+      logger.info(`Maior palavra identificada: "${maiorPalavra}"`);
+
+      // Verifica se a maior palavra é "quick" - indicador de problema de login
+      if (maiorPalavra.toLowerCase() === 'quick') {
+        logger.warn('Palavra "quick" detectada como maior palavra. Possível problema de login.');
+        await nitrotypeService.realizarLogout();
+        return false;
+      }
+      
       // Aguarda a adição da classe is-racing na seção principal
       logger.info('Aguardando início da corrida (classe is-racing)...');
       await this._aguardarInicioCorridaReal(page);
@@ -30,8 +42,7 @@ class RaceService {
       // Pequena pausa antes de iniciar a digitação
       await new Promise(resolve => setTimeout(resolve, 120)); // 0.2 segundos
       
-      // Encontra a maior palavra do texto para pular com Enter
-      const maiorPalavra = this._encontrarMaiorPalavra(textoExtraido);
+      // Log da maior palavra novamente após o início da corrida
       logger.info(`Maior palavra identificada: "${maiorPalavra}"`);
       
       // Digita o texto com velocidade variável e erros ocasionais
@@ -471,4 +482,6 @@ class RaceService {
   }
 }
 
-module.exports = new RaceService();
+// Corrige a referência circular modificando a exportação
+const raceService = new RaceService();
+module.exports = raceService;
