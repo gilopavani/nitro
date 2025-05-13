@@ -28,7 +28,7 @@ class RaceService {
       await this._aguardarInicioCorridaReal(page);
       
       // Pequena pausa antes de iniciar a digitação
-      await new Promise(resolve => setTimeout(resolve, 200)); // 0.2 segundos
+      await new Promise(resolve => setTimeout(resolve, 120)); // 0.2 segundos
       
       // Encontra a maior palavra do texto para pular com Enter
       const maiorPalavra = this._encontrarMaiorPalavra(textoExtraido);
