@@ -285,7 +285,7 @@ class NitroTypeService {
       // Aguarda o container de texto aparecer
       const textContainerExists = await browserManager.page.waitForSelector('.dash-copyContainer', {
         visible: true,
-        timeout: 15000 // Tempo maior para garantir que a página carregue completamente
+        timeout: 20000 // Tempo maior para garantir que a página carregue completamente
       }).then(() => true).catch(() => false);
       
       // Se o container principal não foi encontrado, verifica os seletores alternativos

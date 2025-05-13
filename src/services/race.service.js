@@ -87,7 +87,7 @@ class RaceService {
       // Verifica se o elemento base está presente
       const elementoExiste = await page.waitForSelector(sectionSelector, { 
         visible: true,
-        timeout: 10000 
+        timeout: 18000 
       }).then(() => true).catch(() => false);
       
       if (!elementoExiste) {
@@ -134,7 +134,7 @@ class RaceService {
       logger.info('Extraindo texto da corrida...');
       
       // Aguarda pelo container de texto
-      await page.waitForSelector('.dash-copyContainer', { visible: true, timeout: 10000 });
+      await page.waitForSelector('.dash-copyContainer', { visible: true, timeout: 18000 });
       
       // Extrai o texto letra por letra
       return await page.evaluate(() => {
