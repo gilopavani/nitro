@@ -9,14 +9,14 @@ const puppeteerConfig = {
   launchOptions: {
     headless: process.env.HEADLESS === 'true',
     defaultViewport: {
-      width: 720,
+      width: 1024,
       height: 640,
       deviceScaleFactor: 1
     },
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
-      '--window-size=720,640',
+      // '--window-size=720,640',
       '--disable-dev-shm-usage',
       '--disable-web-security',
       '--disable-features=IsolateOrigins,site-per-process',
@@ -42,7 +42,6 @@ const puppeteerConfig = {
       '--disable-voice-input',
       '--disable-web-security',
       '--disable-application-cache',
-      '--disable-gpu',
     ],
     ignoreHTTPSErrors: true,
     slowMo: parseInt(process.env.SLOW_MO || '0', 10),
