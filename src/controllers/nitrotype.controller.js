@@ -3,6 +3,8 @@
  */
 const nitrotypeService = require('../services/nitrotype.service');
 const logger = require('../utils/logger');
+const metrics = require('../utils/metrics');
+const config = require('../config/app.config');
 
 class NitroTypeController {
   /**
@@ -83,22 +85,29 @@ class NitroTypeController {
       
       while (corridasRealizadas < quantidade && continuarCorridas) {
         logger.info(`Iniciando corrida ${corridasRealizadas + 1} de ${quantidade}`);
+        metrics.registrarInicioCorrida();
+        
+        const inicioTempo = Date.now();
         
         // Realiza uma corrida
         const corridaSucesso = await this.realizarCorrida();
         
+        const tempoDecorrido = Date.now() - inicioTempo;
+        
         if (corridaSucesso) {
           corridasRealizadas++;
-          logger.info(`Corrida ${corridasRealizadas} concluída com sucesso!`);
+          logger.info(`Corrida ${corridasRealizadas} concluída com sucesso em ${tempoDecorrido/1000}s!`);
+          metrics.registrarSucessoCorrida(tempoDecorrido);
           
           // Se não for a última corrida, aguarda antes de iniciar a próxima
           if (corridasRealizadas < quantidade) {
-            const tempoEspera = 4320; //
+            const tempoEspera = config.race.intervalBetweenRaces;
             logger.info(`Aguardando ${tempoEspera/1000} segundos antes da próxima corrida...`);
             await new Promise(resolve => setTimeout(resolve, tempoEspera));
           }
         } else {
           logger.error(`Falha na corrida ${corridasRealizadas + 1}. Interrompendo a sequência.`);
+          metrics.registrarFalhaCorrida();
           continuarCorridas = false;
         }
       }
@@ -107,6 +116,7 @@ class NitroTypeController {
       return corridasRealizadas;
     } catch (error) {
       logger.error(`Erro ao realizar múltiplas corridas: ${error.message}`);
+      metrics.registrarErro('corrida');
       return 0;
     }
   }

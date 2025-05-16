@@ -179,7 +179,7 @@ class NitroTypeService {
       }
 
       // Obter o nome de usuário configurado
-      const username = process.env.NITROTYPE_USERNAME;
+      const username = process.env.NITROTYPE_SHOWNAME;
       if (!username) {
         throw new Error("Nome de usuário não configurado no arquivo .env");
       }
@@ -276,6 +276,40 @@ class NitroTypeService {
   }
 
   /**
+   * Método utilitário para tentativas com backoff exponencial
+   * @param {Function} fn - Função a ser tentada
+   * @param {number} maxRetries - Número máximo de tentativas
+   * @param {number} initialDelay - Tempo inicial de espera em ms
+   * @private
+   */
+  async _retryWithBackoff(fn, maxRetries = 3, initialDelay = 1000) {
+    let attempt = 0;
+    let lastError;
+
+    while (attempt < maxRetries) {
+      try {
+        return await fn();
+      } catch (error) {
+        attempt++;
+        lastError = error;
+
+        if (attempt >= maxRetries) {
+          break;
+        }
+
+        const delay = initialDelay * Math.pow(2, attempt - 1);
+        logger.warn(
+          `Tentativa ${attempt} falhou. Aguardando ${delay}ms antes de tentar novamente.`,
+        );
+        await browserManager.wait(delay);
+      }
+    }
+
+    logger.error(`Todas as ${maxRetries} tentativas falharam`);
+    throw lastError;
+  }
+
+  /**
    * Inicia uma corrida no Nitrotype
    * @returns {Promise<boolean>} True se a corrida for concluída com sucesso
    */
@@ -300,110 +334,76 @@ class NitroTypeService {
     }
   }
 
-  /**
-   * Verifica se estamos na página de corrida correta
-   * @returns {Promise<boolean>}
-   * @private
-   */
-  async _verificarPaginaCorrida() {
-    try {
-      logger.info("Verificando se a página de corrida está carregada...");
+/**
+ * Verifica se estamos na página de corrida correta
+ * @returns {Promise<boolean>}
+ * @private
+ */
+async _verificarPaginaCorrida() {
+  try {
+    logger.info("Verificando se a página de corrida está carregada...");
 
-      // Verifica URL
-      const currentUrl = await browserManager.page.url();
-      if (!currentUrl.includes("nitrotype.com/race")) {
-        logger.error(`URL atual não é a página de corrida: ${currentUrl}`);
-        return false;
-      }
-
-      // Verifica se há mensagem de falha de login
-      const textoFalhaLogin = await browserManager.page.evaluate(() => {
-        const mensagemErro = document.querySelector(".error-message");
-        if (mensagemErro) {
-          return mensagemErro.textContent.trim();
-        }
-
-        // Verifica se há outras mensagens que indicam problemas de autenticação
-        const conteudo = document.body.innerText;
-        if (
-          conteudo.includes("Please log in") ||
-          conteudo.includes("session expired") ||
-          conteudo.includes("Authentication failed")
-        ) {
-          return "Erro de autenticação detectado";
-        }
-
-        return null;
-      });
-
-      if (textoFalhaLogin) {
-        logger.error(`Falha de login detectada: "${textoFalhaLogin}"`);
-        await this.realizarLogout();
-        return false;
-      }
-
-      // Aguarda o container de texto aparecer
-      const textContainerExists = await browserManager.page
-        .waitForSelector(".dash-copyContainer", {
-          visible: true,
-          timeout: 20000, // Tempo maior para garantir que a página carregue completamente
-        })
-        .then(() => true)
-        .catch(() => false);
-
-      // Se o container principal não foi encontrado, verifica os seletores alternativos
-      if (!textContainerExists) {
-        logger.info(
-          "Container principal (.dash-copyContainer) não encontrado, verificando seletores alternativos...",
-        );
-
-        // Verifica se os seletores alternativos estão presentes
-        const alternativeSelectorsFound = await browserManager.page.evaluate(
-          () => {
-            const dashContent = document.querySelector(".dash-content");
-            const dashCopy = document.querySelector(".dash-copy");
-
-            return {
-              dashContentFound: !!dashContent,
-              dashCopyFound: !!dashCopy,
-            };
-          },
-        );
-
-        // Se ambos os seletores alternativos forem encontrados, considera que o container existe
-        if (
-          alternativeSelectorsFound.dashContentFound ||
-          alternativeSelectorsFound.dashCopyFound
-        ) {
-          logger.info(
-            "Seletores alternativos encontrados (dash-content e dash-copy). Página de corrida confirmada.",
-          );
-          return true;
-        }
-
-        // Logs para ajudar na depuração
-        logger.error("Container de texto da corrida não encontrado");
-        logger.debug(
-          `Resultado da verificação alternativa: dash-content: ${alternativeSelectorsFound.dashContentFound}, dash-copy: ${alternativeSelectorsFound.dashCopyFound}`,
-        );
-
-        // Salvar screenshot para depuração
-        await browserManager.page.screenshot({
-          path: "./race-page-error.png",
-          fullPage: true,
-        });
-
-        logger.debug("Screenshot salvo em ./race-page-error.png");
-        return false;
-      }
-
-      logger.info("Página de corrida verificada com sucesso");
-      return true;
-    } catch (error) {
-      logger.error(`Erro ao verificar página de corrida: ${error.message}`);
+    // Verifica URL
+    const currentUrl = await browserManager.page.url();
+    if (!currentUrl.includes("nitrotype.com/race")) {
+      logger.error(`URL atual não é a página de corrida: ${currentUrl}`);
       return false;
     }
+
+    // Verifica se há mensagem de falha de login
+    const textoFalhaLogin = await browserManager.page.evaluate(() => {
+      const mensagemErro = document.querySelector(".error-message");
+      if (mensagemErro) {
+        return mensagemErro.textContent.trim();
+      }
+
+      const conteudo = document.body.innerText;
+      if (
+        conteudo.includes("Please log in") ||
+        conteudo.includes("session expired") ||
+        conteudo.includes("Authentication failed")
+      ) {
+        return "Erro de autenticação detectado";
+      }
+
+      return null;
+    });
+
+    if (textoFalhaLogin) {
+      logger.error(`Falha de login detectada: "${textoFalhaLogin}"`);
+      await this.realizarLogout();
+      return false;
+    }
+
+    // Aguarda qualquer um dos seletores indicativos da página de corrida
+    logger.info("Aguardando a presença de elementos da corrida...");
+    const raceElement = await Promise.race([
+      browserManager.page.waitForSelector(".dash-copyContainer", { visible: true, timeout: 20000 }),
+      browserManager.page.waitForSelector(".dash-content", { visible: true, timeout: 20000 }),
+      browserManager.page.waitForSelector(".dash-copy", { visible: true, timeout: 20000 }),
+    ]).catch(() => null);
+
+    if (raceElement) {
+      logger.info("Página de corrida verificada com sucesso.");
+      return true;
+    }
+
+    // Nenhum dos seletores foi encontrado
+    logger.error("Nenhum dos elementos esperados foi encontrado na página de corrida.");
+
+    // Salvar screenshot para depuração
+    await browserManager.page.screenshot({
+      path: "./race-page-error.png",
+      fullPage: true,
+    });
+
+    logger.debug("Screenshot salvo em ./race-page-error.png");
+    return false;
+  } catch (error) {
+    logger.error(`Erro ao verificar página de corrida: ${error.message}`);
+    return false;
   }
+}
 
   /**
    * Fecha o navegador
@@ -449,4 +449,3 @@ class NitroTypeService {
 }
 
 module.exports = new NitroTypeService();
-
