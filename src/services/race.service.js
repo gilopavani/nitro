@@ -144,8 +144,19 @@ class RaceService {
     try {
       logger.info('Extraindo texto da corrida...');
       
-      // Aguarda pelo container de texto
-      await page.waitForSelector('.dash-copyContainer', { visible: true, timeout: 18000 });
+      // Aguarda por qualquer um dos seletores aparecer usando Promise.race
+      const elementoTexto = await Promise.race([
+        page.waitForSelector('.dash-copyContainer', { visible: true, timeout: 18000 }),
+        page.waitForSelector('.dash-content', { visible: true, timeout: 18000 }),
+        page.waitForSelector('.dash-copy', { visible: true, timeout: 18000 }),
+      ]).catch(() => null);
+      
+      if (!elementoTexto) {
+        logger.error('Nenhum dos seletores de texto foi encontrado');
+        return '';
+      }
+      
+      logger.info('Seletor de texto encontrado, extraindo conteúdo...');
       
       // Extrai o texto letra por letra
       return await page.evaluate(() => {

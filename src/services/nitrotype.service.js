@@ -350,7 +350,7 @@ async _verificarPaginaCorrida() {
       return false;
     }
 
-    // Verifica se há mensagem de falha de login
+    // Verifica falha de login
     const textoFalhaLogin = await browserManager.page.evaluate(() => {
       const mensagemErro = document.querySelector(".error-message");
       if (mensagemErro) {
@@ -375,23 +375,30 @@ async _verificarPaginaCorrida() {
       return false;
     }
 
-    // Aguarda qualquer um dos seletores indicativos da página de corrida
-    logger.info("Aguardando a presença de elementos da corrida...");
-    const raceElement = await Promise.race([
-      browserManager.page.waitForSelector(".dash-copyContainer", { visible: true, timeout: 20000 }),
-      browserManager.page.waitForSelector(".dash-content", { visible: true, timeout: 20000 }),
-      browserManager.page.waitForSelector(".dash-copy", { visible: true, timeout: 20000 }),
-    ]).catch(() => null);
+    logger.info("Aguardando elementos da corrida...");
 
-    if (raceElement) {
-      logger.info("Página de corrida verificada com sucesso.");
+    // Define promessas nomeadas
+    const waiters = [
+      browserManager.page
+        .waitForSelector(".dash-copyContainer", { visible: true, timeout: 20000 })
+        .then(el => ({ seletor: ".dash-copyContainer", el })),
+      browserManager.page
+        .waitForSelector(".dash-content", { visible: true, timeout: 20000 })
+        .then(el => ({ seletor: ".dash-content", el })),
+      browserManager.page
+        .waitForSelector(".dash-copy", { visible: true, timeout: 20000 })
+        .then(el => ({ seletor: ".dash-copy", el })),
+    ];
+
+    const resultado = await Promise.race(waiters).catch(() => null);
+
+    if (resultado && resultado.el) {
+      logger.info(`Página de corrida verificada com sucesso. Elemento encontrado: ${resultado.seletor}`);
       return true;
     }
 
-    // Nenhum dos seletores foi encontrado
     logger.error("Nenhum dos elementos esperados foi encontrado na página de corrida.");
 
-    // Salvar screenshot para depuração
     await browserManager.page.screenshot({
       path: "./race-page-error.png",
       fullPage: true,
@@ -404,6 +411,7 @@ async _verificarPaginaCorrida() {
     return false;
   }
 }
+
 
   /**
    * Fecha o navegador
