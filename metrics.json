@@ -1,14 +1,14 @@
 {
   "sessoes": {
-    "total": 1,
-    "sucesso": 0,
+    "total": 2,
+    "sucesso": 1,
     "falha": 0
   },
   "corridas": {
-    "total": 4,
-    "sucesso": 3,
-    "falha": 0,
-    "tempoMedio": 46454.666666666664
+    "total": 5,
+    "sucesso": 4,
+    "falha": 1,
+    "tempoMedio": 47746.75
   },
   "erros": {
     "login": 0,
@@ -16,5 +16,5 @@
     "navegador": 0,
     "outros": 0
   },
-  "ultimaAtualizacao": "2025-05-16T22:01:55.457Z"
+  "ultimaAtualizacao": "2025-05-16T22:03:33.000Z"
 }
