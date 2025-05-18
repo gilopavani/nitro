@@ -27,13 +27,13 @@ class NitroTypeService {
       // Verifica para qual URL fomos direcionados após tentar acessar a página de login
       const currentUrl = await browserManager.page.url();
       logger.debug(
-        `URL após tentativa de acesso à página de login: ${currentUrl}`,
+        `URL após tentativa de acesso à página de login: ${currentUrl}`
       );
 
       // Verifica se foi redirecionado para o garage (indica login por cookie)
       if (currentUrl.includes("nitrotype.com/garage")) {
         logger.info(
-          "Redirecionado automaticamente para o garage. Verificando login por cookie...",
+          "Redirecionado automaticamente para o garage. Verificando login por cookie..."
         );
 
         // Verifica se o usuário está autenticado
@@ -41,16 +41,16 @@ class NitroTypeService {
 
         if (autenticacaoVerificada) {
           logger.info(
-            "Usuário já autenticado por cookie! Não será necessário fazer login.",
+            "Usuário já autenticado por cookie! Não será necessário fazer login."
           );
           this._usuarioJaAutenticado = true;
           return true;
         } else {
           logger.info(
-            "Cookie detectado, mas autenticação não confirmada. Tentando página de login...",
+            "Cookie detectado, mas autenticação não confirmada. Tentando página de login..."
           );
           await browserManager.goTo(
-            puppeteerConfig.urls.login + "?forceLogin=true",
+            puppeteerConfig.urls.login + "?forceLogin=true"
           );
         }
       }
@@ -66,7 +66,7 @@ class NitroTypeService {
 
       if (!loginPageLoaded) {
         logger.error(
-          "Não foi possível carregar a página de login. Elementos não encontrados.",
+          "Não foi possível carregar a página de login. Elementos não encontrados."
         );
         return false;
       }
@@ -75,7 +75,7 @@ class NitroTypeService {
       return true;
     } catch (error) {
       logger.error(
-        `Erro ao acessar página de login do Nitrotype: ${error.message}`,
+        `Erro ao acessar página de login do Nitrotype: ${error.message}`
       );
       return false;
     }
@@ -105,7 +105,7 @@ class NitroTypeService {
       // Se já estiver autenticado pelos cookies, pula o processo de login
       if (this._usuarioJaAutenticado) {
         logger.info(
-          "Usuário já autenticado por cookie. Pulando processo de login.",
+          "Usuário já autenticado por cookie. Pulando processo de login."
         );
         return true;
       }
@@ -170,8 +170,8 @@ class NitroTypeService {
           .waitForNavigation({ waitUntil: "networkidle2" })
           .catch(() =>
             logger.debug(
-              "Timeout na navegação para o garage, continuando mesmo assim",
-            ),
+              "Timeout na navegação para o garage, continuando mesmo assim"
+            )
           );
 
         // Aguarda um momento adicional para garantir carregamento de elementos dinâmicos
@@ -185,7 +185,7 @@ class NitroTypeService {
       }
 
       logger.debug(
-        `Procurando pelo nome de usuário "${username}" na página...`,
+        `Procurando pelo nome de usuário "${username}" na página...`
       );
 
       // Busca pelo nome de usuário no conteúdo da página
@@ -225,12 +225,12 @@ class NitroTypeService {
 
       if (usernameFound) {
         logger.info(
-          `Usuário "${username}" encontrado na página. Autenticação confirmada.`,
+          `Usuário "${username}" encontrado na página. Autenticação confirmada.`
         );
         return true;
       } else {
         logger.error(
-          `Usuário "${username}" não encontrado na página. Autenticação falhou.`,
+          `Usuário "${username}" não encontrado na página. Autenticação falhou.`
         );
 
         // Salvar screenshot para depuração
@@ -299,7 +299,7 @@ class NitroTypeService {
 
         const delay = initialDelay * Math.pow(2, attempt - 1);
         logger.warn(
-          `Tentativa ${attempt} falhou. Aguardando ${delay}ms antes de tentar novamente.`,
+          `Tentativa ${attempt} falhou. Aguardando ${delay}ms antes de tentar novamente.`
         );
         await browserManager.wait(delay);
       }
@@ -334,84 +334,77 @@ class NitroTypeService {
     }
   }
 
-/**
- * Verifica se estamos na página de corrida correta
- * @returns {Promise<boolean>}
- * @private
- */
-async _verificarPaginaCorrida() {
-  try {
-    logger.info("Verificando se a página de corrida está carregada...");
+  /**
+   * Verifica se estamos na página de corrida correta
+   * @returns {Promise<boolean>}
+   * @private
+   */
+  async _verificarPaginaCorrida() {
+    try {
+      logger.info("Verificando se a página de corrida está carregada...");
 
-    // Verifica URL
-    const currentUrl = await browserManager.page.url();
-    if (!currentUrl.includes("nitrotype.com/race")) {
-      logger.error(`URL atual não é a página de corrida: ${currentUrl}`);
-      return false;
-    }
-
-    // Verifica falha de login
-    const textoFalhaLogin = await browserManager.page.evaluate(() => {
-      const mensagemErro = document.querySelector(".error-message");
-      if (mensagemErro) {
-        return mensagemErro.textContent.trim();
+      // Verifica URL
+      const currentUrl = await browserManager.page.url();
+      if (!currentUrl.includes("nitrotype.com/race")) {
+        logger.error(`URL atual não é a página de corrida: ${currentUrl}`);
+        return false;
       }
 
-      const conteudo = document.body.innerText;
-      if (
-        conteudo.includes("Please log in") ||
-        conteudo.includes("session expired") ||
-        conteudo.includes("Authentication failed")
-      ) {
-        return "Erro de autenticação detectado";
+      // Verifica falha de login
+      const textoFalhaLogin = await browserManager.page.evaluate(() => {
+        const mensagemErro = document.querySelector(".error-message");
+        if (mensagemErro) {
+          return mensagemErro.textContent.trim();
+        }
+
+        const conteudo = document.body.innerText;
+        if (
+          conteudo.includes("Please log in") ||
+          conteudo.includes("session expired") ||
+          conteudo.includes("Authentication failed")
+        ) {
+          return "Erro de autenticação detectado";
+        }
+
+        return null;
+      });
+
+      if (textoFalhaLogin) {
+        logger.error(`Falha de login detectada: "${textoFalhaLogin}"`);
+        await this.realizarLogout();
+        return false;
       }
 
-      return null;
-    });
+      // Verificar apenas a existência do elemento dash-center
+      const elementoExiste = await browserManager.page
+        .waitForSelector(".dash-center", {
+          visible: true,
+          timeout: 10000,
+        })
+        .then(() => true)
+        .catch(() => false);
 
-    if (textoFalhaLogin) {
-      logger.error(`Falha de login detectada: "${textoFalhaLogin}"`);
-      await this.realizarLogout();
+      if (elementoExiste) {
+        logger.info(
+          "Página de corrida carregada com sucesso. Elemento dash-center encontrado."
+        );
+        return true;
+      }
+
+      logger.error("Elemento dash-center não encontrado na página de corrida.");
+
+      await browserManager.page.screenshot({
+        path: "./race-page-error.png",
+        fullPage: true,
+      });
+
+      logger.debug("Screenshot salvo em ./race-page-error.png");
+      return false;
+    } catch (error) {
+      logger.error(`Erro ao verificar página de corrida: ${error.message}`);
       return false;
     }
-
-    logger.info("Aguardando elementos da corrida...");
-
-    // Define promessas nomeadas
-    const waiters = [
-      browserManager.page
-        .waitForSelector(".dash-copyContainer", { visible: true, timeout: 20000 })
-        .then(el => ({ seletor: ".dash-copyContainer", el })),
-      browserManager.page
-        .waitForSelector(".dash-content", { visible: true, timeout: 20000 })
-        .then(el => ({ seletor: ".dash-content", el })),
-      browserManager.page
-        .waitForSelector(".dash-copy", { visible: true, timeout: 20000 })
-        .then(el => ({ seletor: ".dash-copy", el })),
-    ];
-
-    const resultado = await Promise.race(waiters).catch(() => null);
-
-    if (resultado && resultado.el) {
-      logger.info(`Página de corrida verificada com sucesso. Elemento encontrado: ${resultado.seletor}`);
-      return true;
-    }
-
-    logger.error("Nenhum dos elementos esperados foi encontrado na página de corrida.");
-
-    await browserManager.page.screenshot({
-      path: "./race-page-error.png",
-      fullPage: true,
-    });
-
-    logger.debug("Screenshot salvo em ./race-page-error.png");
-    return false;
-  } catch (error) {
-    logger.error(`Erro ao verificar página de corrida: ${error.message}`);
-    return false;
   }
-}
-
 
   /**
    * Fecha o navegador
