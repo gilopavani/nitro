@@ -5,7 +5,7 @@
     "falha": 0
   },
   "corridas": {
-    "total": 7,
+    "total": 8,
     "sucesso": 7,
     "falha": 0,
     "tempoMedio": 46071.71428571429
@@ -16,5 +16,5 @@
     "navegador": 0,
     "outros": 0
   },
-  "ultimaAtualizacao": "2025-05-18T00:09:14.597Z"
+  "ultimaAtualizacao": "2025-05-18T00:09:18.921Z"
 }
