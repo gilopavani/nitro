@@ -70,7 +70,7 @@ class RaceService {
         .catch(() => logger.debug("Timeout ao aguardar resultados da corrida"));
 
       // Aguarda tempo para visualização dos resultados
-      await new Promise((resolve) => setTimeout(resolve, 5000));
+      await new Promise((resolve) => setTimeout(resolve, 15000));
 
       // Extrai e exibe os resultados da corrida
       await this._extrairResultadosCorrida(page);
